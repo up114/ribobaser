@@ -22,19 +22,20 @@ The goal of ribobaser is to unify common operations we use on count tables
 
 ## Installation
 
-You can install the development version of ribobaser from R
+You can install the development version of ribobaser once you clone this repo.
 
 ``` r
-# FILL THIS IN! HOW CAN PEOPLE INSTALL YOUR DEV PACKAGE?
+devtools::install(build_vignettes = TRUE)
 ```
 
 ## Example
 
-This is a basic example which shows you how to solve a common problem:
+Check out the vignette for a simple example. 
 
 ```{r example}
 library(ribobaser)
 ## basic example code
+browseVignettes(package = "ribobaser")
 ```
 
 

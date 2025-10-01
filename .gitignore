@@ -1,5 +1,22 @@
-.DS_Store
+# RStudio user files
+.Rproj.user
 .Rhistory
+.RData
+.Ruserdata
+
+# RStudio project files
+*.Rproj
+
+# Package build output
+*.tar.gz
+*.Rcheck/
+
+# vignettes and documentation build output
 inst/doc
-/doc/
-/Meta/
+doc
+Meta
+.Rbuildignore
+
+# Common OS cruft
+.DS_Store
+Thumbs.db
