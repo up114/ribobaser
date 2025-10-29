@@ -24,7 +24,8 @@ Imports:
     foreach,
     matrixStats,
     propr,
-    stats
+    stats,
+    sva
 Depends: 
     R (>= 3.5)
 LazyData: true
