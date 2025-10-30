@@ -39,6 +39,7 @@
 #' @importFrom utils data
 #' @export
 aggregate_samples <- function(TE,
+                              metadata = c("Ribobase_QC_dedup_data"),
                               group_by = c("study", "cell_line"),
                               fun = c("mean")) {
   TE <- as.matrix(TE)
@@ -49,8 +50,8 @@ aggregate_samples <- function(TE,
   group_choice <- match.arg(group_by)
   fun_choice <- match.arg(fun)
 
-  utils::data("Ribobase_QC_dedup_data", package = "ribobaser", envir = environment())
-  metadata <- get("Ribobase_QC_dedup_data", envir = environment())
+  utils::data(metadata, package = "ribobaser", envir = environment())
+  metadata <- get(metadata, envir = environment())
 
   meta_subset <- metadata[!duplicated(metadata$Experiment),
                           c("Experiment", "Study", "Cell line"),
