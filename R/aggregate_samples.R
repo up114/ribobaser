@@ -40,7 +40,7 @@
 #' @importFrom utils data
 #' @export
 aggregate_samples <- function(TE,
-                              metadata = "Ribobase_QC_dedup_data",
+                              metadata = c("Ribobase_QC_dedup_data"),
                               group_by = c("study", "cell_line"),
                               fun = c("mean")) {
   TE <- as.matrix(TE)
