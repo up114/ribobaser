@@ -3,42 +3,29 @@
 #' Remove leading principal components (PCs) from a translation efficiency (TE)
 #' matrix to control unwanted sample-level structure. Works either globally
 #' (one SVD across all samples) or per study (one SVD per study block).
+#' 
+#' Assumptions
+#'  1) Inputs are genes by samples
+#'  2) Inputs are already CLR-normalized (no normalization occurs within this function)
+#'    - either run with TE matrix or with Ribo-Seq/RNA-Seq matrices after CLR normalization
+#' 
+#' @param mat numeric matrix, genes x samples. Row names = genes; col names = samples.
+#' @param study_map optional data.frame with columns {Experiment} and {Study};
+#'   required when {method = "study"}. {Experiment} must match {colnames(mat)}.
+#' @param method character, {"study"} or {"global"}.
+#' @param n_pcs {"auto"} (default), which uses sva::num.sv(..., method = "be"), or non-negative integer.
+#' @param min_samples integer; for {method="study"}, skip correction when a study
+#'   has fewer than this many samples. Default: 15.
 #'
-#' This function supports two methods of determining the number of PCs to remove,
-#' controlled by `n_pcs`:
-#' *  `auto` uses {sva::num.sv(..., method = "be")} to estimate the number of
-#'     PCs to remove based on the method proposed by Buja and Eyuboglu 1992
-#' * otherwise, you can pass an integer to force a fixed number of PCs to remove
-#' }
-#'
-#' This function also supports PC removal on a global level or a study level,
-#' controlled by `method`
-#' * `global` performs PC removal on the entire TE matrix
-#' * `study` performs PC removal on each study; requires a study_map and
-#'    min_samples(see param)
-#'
-#' Assumptions:
-#'    1) The input is already normalized; no internal normalization
-#'
-#' @param te_mat numeric matrix, genes x samples. Row names = genes; col names = samples.
-#' @param study_map optional data.frame with columns \code{Experiment} and \code{Study};
-#'   required when \code{method = "study"}. \code{Experiment} must match \code{colnames(te_mat)}.
-#' @param method character, \code{"study"} (default) or \code{"global"}.
-#' @param n_pcs \code{"auto"} (default) or non-negative integer.
-#' @param min_samples integer; for \code{method="study"}, skip correction when a study
-#'   has fewer than this many samples. Default \code{15}.
-#'
-#' @return list with:
-#' {
-#'   {te_corrected}: matrix (genes x samples), same dimnames as \code{te_mat}.
-#'   {n_pcs}: if global, an integer; if study, a data.frame with \code{Study} and \code{n_pcs}.
-#'   {dropped_genes}: character vector of genes dropped from SVD due to near-zero variance
+#' @return list with elements:
+#'    - mat_pc: matrix (genes x samples), with the same dimensions as the input matrix
+#'    - n_pcs: if global, an integer; if study, a data.frame with {Study} and {n_pcs}.
+#'    - dropped_genes: character vector of genes dropped from SVD due to near-zero variance
 #'         (they are re-inserted unchanged in the output).
-#' }
-#'
+#' 
 #' @examples
-#' # Global correction, preserve CLR (good before TEC):
-#' # out <- pc_remove(te_mat, method = "global")
+#' # Global correction:
+#' # out <- pc_remove(mat, method = "global")
 #'
 #' @importFrom stats lm residuals
 #' @export
