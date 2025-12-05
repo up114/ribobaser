@@ -4,13 +4,21 @@
 #' matrix to control unwanted sample-level structure. Works either globally
 #' (one SVD across all samples) or per study (one SVD per study block).
 #'
-#' \strong{Orientation}: input must be \emph{genes x samples} (matches \code{te()} output).
-#'
-#' \strong{PC count}:
-#' \itemize{
-#'   \item \code{n_pcs = "auto"} uses \code{sva::num.sv(..., method = "be")} like the reference scripts.
-#'   \item pass an integer to force a fixed number of PCs to remove.
+#' This function supports two methods of determining the number of PCs to remove,
+#' controlled by `n_pcs`:
+#' *  `auto` uses {sva::num.sv(..., method = "be")} to estimate the number of
+#'     PCs to remove based on the method proposed by Buja and Eyuboglu 1992
+#' * otherwise, you can pass an integer to force a fixed number of PCs to remove
 #' }
+#'
+#' This function also supports PC removal on a global level or a study level,
+#' controlled by `method`
+#' * `global` performs PC removal on the entire TE matrix
+#' * `study` performs PC removal on each study; requires a study_map and
+#'    min_samples(see param)
+#'
+#' Assumptions:
+#'    1) The input is already normalized; no internal normalization
 #'
 #' @param te_mat numeric matrix, genes x samples. Row names = genes; col names = samples.
 #' @param study_map optional data.frame with columns \code{Experiment} and \code{Study};
@@ -21,12 +29,11 @@
 #'   has fewer than this many samples. Default \code{15}.
 #'
 #' @return list with:
-#' \itemize{
-#'   \item \code{te_corrected}: matrix (genes x samples), same dimnames as \code{te_mat}.
-#'   \item \code{n_pcs}: if global, an integer; if study, a data.frame with \code{Study} and \code{n_pcs}.
-#'   \item \code{dropped_genes}: character vector of genes dropped from SVD due to near-zero variance
+#' {
+#'   {te_corrected}: matrix (genes x samples), same dimnames as \code{te_mat}.
+#'   {n_pcs}: if global, an integer; if study, a data.frame with \code{Study} and \code{n_pcs}.
+#'   {dropped_genes}: character vector of genes dropped from SVD due to near-zero variance
 #'         (they are re-inserted unchanged in the output).
-#'   \item \code{params}: list of arguments used.
 #' }
 #'
 #' @examples
