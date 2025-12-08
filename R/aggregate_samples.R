@@ -17,7 +17,8 @@
 #'   the metadata file.
 #' @param metadata data.frame with `Experiment`, `Cell line`, and `Study` columns.
 #'   - Ribobase_QC_dedup_data and Ribobase_QC_non_dedup_data contain this
-#'     information for most RiboBase samples
+#'     information for most RiboBase samples; both are stored in the data folder of the
+#'     ribobaseR package
 #' @param group_by character string specifying the metadata field to use when
 #'   combining samples. Either `'study'` or `'cell_line'`. Defaults to `'study'`.
 #' @param fun aggregation function identifier. Currently only `'mean'` is
@@ -40,7 +41,7 @@
 #' @importFrom utils data
 #' @export
 aggregate_samples <- function(TE,
-                              metadata = c("Ribobase_QC_dedup_data"),
+                              metadata = c("Ribobase_QC_dedup_data", "Ribobase_QC_non_dedup_data"),
                               group_by = c("study", "cell_line"),
                               fun = c("mean")) {
   TE <- as.matrix(TE)
@@ -51,9 +52,11 @@ aggregate_samples <- function(TE,
   group_choice <- match.arg(group_by)
   fun_choice <- match.arg(fun)
 
-  utils::data(metadata, package = "ribobaser", envir = environment())
-  metadata <- get(metadata, envir = environment())
-
+  if(metadata %in% c("Ribobase_QC_dedup_data", "Ribobase_QC_non_dedup_data")) {
+    utils::data(metadata, package = "ribobaser", envir = environment())
+    metadata <- get(metadata, envir = environment())
+  }
+  
   meta_subset <- metadata[!duplicated(metadata$Experiment),
                           c("Experiment", "Study", "Cell line"),
                           drop = FALSE]
@@ -81,4 +84,5 @@ aggregate_samples <- function(TE,
   dimnames(aggregated) <- list(rownames(TE), group_levels)
   aggregated
 }
+
 
