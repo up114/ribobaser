@@ -27,9 +27,9 @@
 #' # Global correction:
 #' # out <- pc_remove(mat, method = "global")
 #'
-#' @importFrom stats lm residuals
+#' @importFrom stats setNames
 #' @export
-pc_remove <- function(te_mat,
+pc_remove <- function(mat,
                       study_map = NULL,
                       method = c("study", "global"),
                       n_pcs = "auto",
@@ -38,9 +38,9 @@ pc_remove <- function(te_mat,
   method <- match.arg(method)
 
   # ----- checks -----
-  stopifnot(is.matrix(te_mat), is.numeric(te_mat))
-  if (is.null(rownames(te_mat)) || is.null(colnames(te_mat))) {
-    stop("te_mat must have rownames (genes) and colnames (samples).")
+  stopifnot(is.matrix(mat), is.numeric(mat))
+  if (is.null(rownames(mat)) || is.null(colnames(mat))) {
+    stop("mat must have rownames (genes) and colnames (samples).")
   }
   if (method == "study") {
     if (is.null(study_map) || !all(c("Experiment","Study") %in% colnames(study_map))) {
@@ -48,24 +48,23 @@ pc_remove <- function(te_mat,
     }
     study_map$Experiment <- as.character(study_map$Experiment)
     study_map$Study      <- as.character(study_map$Study)
-    if (!all(colnames(te_mat) %in% study_map$Experiment)) {
-      miss <- setdiff(colnames(te_mat), study_map$Experiment)
+    if (!all(colnames(mat) %in% study_map$Experiment)) {
+      miss <- setdiff(colnames(mat), study_map$Experiment)
       stop("Missing in study_map$Experiment: ", paste(miss, collapse = ", "))
     }
   }
-  if (any(!is.finite(te_mat))) stop("te_mat contains NA/Inf; handle before pc_remove().")
-
+  if (any(!is.finite(mat))) stop("mat contains NA/Inf; handle before pc_remove().")
+ 
   # -----  helper functions -----
 
   # Drop ~zero-variance genes (for SVD stability). They’re re-inserted unchanged later.
   drop_zero_var <- function(M, tol = 1e-6) {
-    v <- matrixStats::rowVars(M)
+    v <- apply(M, 1, var)
 
     keep <- !(v <= tol | is.na(v))
     list(M = M[keep, , drop = FALSE], keep = keep)
   }
-
-
+  
   # Decide how many PCs to remove:
   choose_k <- function(Y) {
     # Y is samples x genes - transpose
@@ -106,7 +105,7 @@ pc_remove <- function(te_mat,
     k <- choose_k(Y)
     cat("   PCs to remove:", k, "\n")
 
-    # 4) regress out top k PCs (equivalent to lm(Y ~ U) with intercept)
+    # 4) regress out top k PCs 
     if (k > 0) {
       sv  <- svd(Y, nu = k, nv = 0)               # only need U (left singular vectors)
       U   <- sv$u[, seq_len(k), drop = FALSE]
@@ -127,26 +126,32 @@ pc_remove <- function(te_mat,
   }
 
   # ----- main flow -----
-  original_cols <- colnames(te_mat)
+  original_cols <- colnames(mat)
   dropped_all   <- character(0)
 
   if (method == "global") {
-    g <- correct_block(te_mat, "GLOBAL")
-    te_corr <- g$corrected
+    g <- correct_block(mat, "GLOBAL")
+    mat_pc <- g$corrected
     n_out   <- g$k
     dropped_all <- g$dropped
 
   } else {
-    # study-wise correction
-    map <- setNames(study_map$Study, study_map$Experiment)
-    studies <- unique(map[original_cols])                 # preserve input order
+     # Check for missing metadata 
+    study_lookup <- stats::setNames(study_map$Study, study_map$Experiment)
+    sample_studies <- study_lookup[colnames(mat)]
+    if (any(is.na(sample_studies))) {
+      missing_samples <- colnames(mat)[is.na(sample_studies)]
+      stop("Missing metadata for samples: ", paste(unique(missing_samples), collapse = ", "))
+    }
+    
+    studies <- unique(sample_studies)                 # preserve input order
     blocks  <- vector("list", length(studies))
     names(blocks) <- studies
     meta <- data.frame(Study = studies, n_pcs = NA_integer_, stringsAsFactors = FALSE)
 
     for (s in studies) {
-      cols <- names(which(map == s))
-      sub  <- te_mat[, cols, drop = FALSE]
+      cols <- names(which(sample_studies == s))
+      sub  <- mat[, cols, drop = FALSE]
       if (ncol(sub) < min_samples) {
         cat("== Block:", s, "| too few samples (", ncol(sub),
             " < ", min_samples, ") -> skipping\n", sep = "")
@@ -160,15 +165,15 @@ pc_remove <- function(te_mat,
       }
     }
 
-    te_corr <- do.call(cbind, blocks)[, original_cols, drop = FALSE]
+    mat_pc <- do.call(cbind, blocks)[, original_cols, drop = FALSE]
     n_out   <- meta
   }
 
   # match input ordering
-  te_corr <- te_corr[rownames(te_mat), original_cols, drop = FALSE]
+  mat_pc <- mat_pc[rownames(mat), original_cols, drop = FALSE]
 
   list(
-    te_corrected  = te_corr,
+    mat_pc  = mat_pc,
     n_pcs         = n_out,
     dropped_genes = unique(dropped_all)
   )
