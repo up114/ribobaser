@@ -43,3 +43,37 @@ test_that("zero_imputation preserves non-zero values and structure", {
   expect_equal(res$ribo["g2", "s1"], 5)
   expect_equal(res$rna ["g2", "s2"], 6)
 })
+
+test_that("multiplicative imputation delegates to zCompositions", {
+  testthat::skip_if_not_installed("zCompositions")
+
+  RIBO <- matrix(
+    c(0, 5, 1,
+      2, 1, 0,
+      3, 0, 4),
+    nrow = 3, byrow = TRUE,
+    dimnames = list(paste0("g", 1:3), paste0("s", 1:3))
+  )
+  RNA <- matrix(
+    c(1, 4, 0,
+      0, 2, 5,
+      3, 0, 1),
+    nrow = 3, byrow = TRUE,
+    dimnames = list(paste0("g", 1:3), paste0("s", 1:3))
+  )
+
+  res <- zero_imputation(
+    RIBO,
+    RNA,
+    method = "multiplicative",
+    multiplicative_method = "GBM",
+    output = "p-count"
+  )
+
+  expect_identical(dim(res$ribo), dim(RIBO))
+  expect_identical(dim(res$rna),  dim(RNA))
+  expect_equal(colnames(res$ribo), colnames(RIBO))
+  expect_equal(rownames(res$ribo), rownames(RIBO))
+  expect_true(all(res$ribo > 0))
+  expect_true(all(res$rna  > 0))
+})

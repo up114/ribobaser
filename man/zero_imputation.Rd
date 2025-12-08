@@ -4,7 +4,14 @@
 \alias{zero_imputation}
 \title{Replace zero counts with pseudocounts}
 \usage{
-zero_imputation(RIBO, RNA)
+zero_imputation(
+  RIBO,
+  RNA,
+  method = c("simple", "multiplicative"),
+  multiplicative_method = "GBM",
+  output = "p-count",
+  transpose = TRUE
+)
 }
 \arguments{
 \item{RIBO}{numeric matrix or data.frame of counts with genes in rows and
@@ -12,22 +19,32 @@ samples in columns.}
 
 \item{RNA}{numeric matrix or data.frame of counts with genes in rows and
 samples in columns.}
+
+\item{method}{imputation strategy to use. \code{"simple"} replaces zeros with ones,
+\code{"multiplicative"} delegates to \code{zCompositions::cmultRepl()}.}
+
+\item{multiplicative_method}{method argument passed to
+\code{zCompositions::cmultRepl()} when \code{method = "multiplicative"}.}
+
+\item{output}{output argument passed to \code{zCompositions::cmultRepl()} when
+\code{method = "multiplicative"}.}
+
+\item{transpose}{whether to transpose matrices before multiplicative
+imputation. \code{cmultRepl()} expects samples in rows and features in columns,
+so the default \code{TRUE} works with matrices that store genes in rows.}
 }
 \value{
 list with elements
 \itemize{
-\item ribo: \code{RIBO} converted to a matrix with zeros replaced by ones.
-\item rna:  \code{RNA} converted to a matrix with zeros replaced by ones.
+\item ribo: \code{RIBO} converted to a matrix with imputed values.
+\item rna:  \code{RNA} converted to a matrix with imputed values.
 }
 }
 \description{
 Many compositional workflows require strictly positive counts before
-applying log-ratio transforms. This utility performs a simple zero-imputation
-step, replacing all zeros in paired RIBO and RNA matrices with ones.
-}
-\details{
-Features to implement
-a) Multiplicative imputation as in Shilpa's work
+applying log-ratio transforms. This utility either performs a simple
+zero-imputation step (replace zeros with ones) or a multiplicative
+replacement using \code{zCompositions::cmultRepl()}.
 }
 \examples{
 RIBO <- matrix(c(0, 5, 10,
@@ -40,5 +57,6 @@ RNA  <- matrix(c(2, 0, 4,
                dimnames = list(c("g1", "g2"), paste0("s", 1:3)))
 
 zero_imputation(RIBO, RNA)
+zero_imputation(RIBO, RNA, method = "multiplicative")
 
 }
