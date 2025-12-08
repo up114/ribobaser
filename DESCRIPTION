@@ -25,7 +25,8 @@ Imports:
     matrixStats,
     propr,
     stats,
-    sva
+    sva,
+    zCompositions
 Depends: 
     R (>= 3.5)
 LazyData: true

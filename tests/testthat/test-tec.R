@@ -28,6 +28,7 @@ test_that("tec matches propr:::lr2rho for regression TE", {
     expected[upper.tri(expected)] <- rho_direct
     expected[lower.tri(expected)] <- t(expected)[lower.tri(expected)]
   }
+  dimnames(expected) <- list(genes, genes)
 
   expect_equal(rho_mat, expected)
 })
