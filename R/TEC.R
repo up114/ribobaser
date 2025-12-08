@@ -33,7 +33,7 @@
 #'   rna  <- t(as.matrix(rnaseq_raw_human_cap_995[keep_genes, keep_samples]))
 #'
 #'   te_mat <- te(ribo, rna, method = "regression")
-#'   tec = tec(te_mat, method = "rho")
+#'   tec_mat = tec(te_mat, method = "rho")
 #'
 #' @export
 tec <- function(TE,
@@ -94,12 +94,14 @@ tec <- function(TE,
 
     TE <- t(TE)
     keep <- apply(TE, 2, sd, na.rm = TRUE) > 1e-6
+    if (!any(keep)) {
+      stop("All genes have near-zero variance; cannot estimate a glasso TEC network.")
+    }
+
     TE <- TE[, keep, drop = FALSE]
 
     # center and scale each gene for numerical stability
     TE <- scale(TE)
-
-    gene_names = colnames(TE)
 
     lambda_grid = seq(0.1, 1.00, by = 0.02)
 
@@ -117,12 +119,17 @@ tec <- function(TE,
     )
 
     lambda <- opt_graph$opt.lambda
-    cat(sprintf("Chosen lambda = %.2f", lambda))
+    cat(sprintf("Chosen lambda = %.2f\n", lambda))
 
     Theta = opt_graph$opt.icov # precision matrix
 
     # Save results
     Theta <- (Theta + t(Theta)) / 2 # symmetrize
+
+    gene_names <- colnames(TE)
+    if (is.null(gene_names)) {
+      gene_names <- paste0("gene", seq_len(ncol(TE)))
+    }
     dimnames(Theta) <- list(gene_names, gene_names)
 
     return(Theta)
@@ -142,28 +149,32 @@ tec <- function(TE,
       TE <- TE[gsg$goodSamples, gsg$goodGenes]
     }
 
+    if(nrow(TE) < 1) {
+      stop("All genes dropped in WGCNA QC.")
+    }
+
     # Soft-threshold (power) scan
     powers <- c(1:10, seq(12, 20, 2))  # candidate powers for adjacency function
 
     sft <- WGCNA::pickSoftThreshold(
       TE,
-      networkType = "signed",                     # 'signed' uses positive correlations only (preferred for biology)
+      networkType = "signed",                     # signed network
       corFnc = "cor",                             # correlation function used to compute similarity
       corOptions = list(use = "pairwise.complete.obs"),  # handles missing data by pairwise deletion
       powerVector = powers,                       # the vector of powers to test
-      verbose = 5                                 # verbosity level (higher = more output)
+      verbose = 5                                 # verbosity level
     )
 
     # pick power (find minimum power where R^2 >= 0.9)
     ok <- which(sft$fitIndices$SFT.R.sq >= 0.9)
     if (length(ok) == 0) {
-      warning("No power reaches R² ≥ 0.9; picking power with max R².")
+      warning("No power reaches R^2 >= 0.9; picking power with max R^2.")
       picked_power <- sft$fitIndices$Power[ which.max(sft$fitIndices$SFT.R.sq) ]
     } else {
       picked_power <- sft$fitIndices$Power[ ok[1] ]
     }
 
-    cat(sprintf("Chosen power = %.2f", picked_power))
+    cat(sprintf("Chosen power = %.2f\n", picked_power))
 
     # generate correlation matrix - TOM
     TOM <- WGCNA::TOMsimilarityFromExpr(
@@ -176,6 +187,10 @@ tec <- function(TE,
 
     # Format + return genes×genes matrix
     gene_names <- colnames(TE)
+    if (is.null(gene_names)) {
+      gene_names <- paste0("gene", seq_len(ncol(TE)))
+    }
+
     dimnames(TOM) <- list(gene_names, gene_names)
     TOM <- (TOM + t(TOM)) / 2
     return(TOM)
