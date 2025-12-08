@@ -2,7 +2,6 @@
 #'
 #' Compute translation efficiency covariation (TEC) for all gene pairs from a matrix of
 #' translation efficiency (TE) values. Input should be genes in rows and samples in columns.
-#' The current implementation relies on `propr:::lr2rho()` to obtain proportionality scores.
 #'
 #' The computation scales quadratically with the number of genes because every pair is
 #' evaluated. For large gene sets and parallelization strategies.
@@ -16,10 +15,10 @@
 #'
 #' @param TE numeric matrix or data.frame with genes in rows and samples in columns.
 #' @param method character string selecting the TEC estimator.
-#'   - `'rho'` uses the `propr` package and returns a TEC matrix
+#'   - `'rho'` uses the `propr` package and returns a TEC matrix;
+#'     `propr:::lr2rho()` to obtain proportionality scores
 #'   - `'wgcna'` uses the `WGCNA` package and returns a TOM matrix
 #'   - `'glasso'` uses the `huge` package and returns a precision matrix
-#'
 #'
 #' @return Symmetric numeric matrix genes by genes with proportionality scores.
 #' @examples
