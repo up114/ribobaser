@@ -16,7 +16,7 @@
 #'   columns. Column names must match the `Experiment` identifiers present in
 #'   the metadata file.
 #' @param metadata data.frame with `Experiment`, `Cell line`, and `Study` columns.
-#'   - Ribobase_QC_dedup_data and Ribobase_QC_non_dedup_data contains this
+#'   - Ribobase_QC_dedup_data and Ribobase_QC_non_dedup_data contain this
 #'     information for most RiboBase samples
 #' @param group_by character string specifying the metadata field to use when
 #'   combining samples. Either `'study'` or `'cell_line'`. Defaults to `'study'`.
@@ -81,3 +81,4 @@ aggregate_samples <- function(TE,
   dimnames(aggregated) <- list(rownames(TE), group_levels)
   aggregated
 }
+
