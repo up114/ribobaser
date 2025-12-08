@@ -4,7 +4,12 @@
 \alias{aggregate_samples}
 \title{Aggregate Samples}
 \usage{
-aggregate_samples(TE, group_by = c("study", "cell_line"), fun = c("mean"))
+aggregate_samples(
+  TE,
+  metadata = c("Ribobase_QC_dedup_data"),
+  group_by = c("study", "cell_line"),
+  fun = c("mean")
+)
 }
 \arguments{
 \item{TE}{numeric matrix or data.frame with genes in rows and samples in

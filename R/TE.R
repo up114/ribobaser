@@ -22,6 +22,9 @@
 #' @param method character string selecting the TE estimator. `'regression'`
 #'   runs the compositional regression workflow, `'logratio'` returns
 #'   `clr(RIBO) - clr(RNA)`.
+#' @param pc_removal logical for whether principal component removal should be applied
+#'        to the RIBO and RNA matrices after conversion to CLR values
+#' @param n_pcs {"auto"} (default), which uses sva::num.sv(..., method = "be"), or non-negative integer.
 #' @param parallel logical run with foreach dopar (only used for
 #'   `method = "regression"`).
 #' @param n_cores integer cores for parallel (only used for
@@ -46,9 +49,11 @@
 #' @importFrom foreach %do% %dopar%
 #' @export
 te <- function(RIBO, RNA,
-               method = c("regression", "logratio"),
-               parallel = FALSE,
-               n_cores = max(1L, parallel::detectCores() - 1L)) {
+                  method = c("regression", "logratio"),
+                  pc_removal = FALSE,
+                  n_pcs = "auto",
+                  parallel = FALSE,
+                  n_cores = max(1L, parallel::detectCores() - 1L)) {
 
   method <- match.arg(method)
 
@@ -86,6 +91,26 @@ te <- function(RIBO, RNA,
   # CLR via propr
   pr_RIBO <- propr::propr(RIBO, metric = "rho", ivar = "clr", alpha = NA, p = 100)
   pr_RNA  <- propr::propr(RNA,  metric = "rho", ivar = "clr", alpha = NA, p = 100)
+
+  if(pc_removal) {
+    ribo_clr_pc <- pc_remove(t(pr_RIBO@logratio),
+                             study_map = NULL,
+                             method = "global",
+                             n_pcs = n_pcs,
+                             min_samples = 15)
+
+    rna_clr_pc <- pc_remove(t(pr_RNA@logratio),
+                            study_map = NULL,
+                            method = "global",
+                            n_pcs = n_pcs,
+                            min_samples = 15)
+    ribo_clr_pc <- t(ribo_clr_pc$te_corrected)
+    rna_clr_pc <- t(rna_clr_pc$te_corrected)
+
+    # force row means back to 0
+    pr_RIBO@logratio <- sweep(ribo_clr_pc, 1, rowMeans(ribo_clr_pc), "-")
+    pr_RNA@logratio <- sweep(rna_clr_pc, 1, rowMeans(rna_clr_pc), "-")
+  }
 
   # CLR -> ILR
   RIBO_ilr <- compositions::clr2ilr(pr_RIBO@logratio)
