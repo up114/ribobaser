@@ -186,7 +186,8 @@ tec <- function(TE,
       networkType = "signed",
       TOMType = "signed",
       power = picked_power,
-      corType = "pearson"
+      corType = "pearson",
+      verbose = 0
     )
 
     # Format + return genes×genes matrix

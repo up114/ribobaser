@@ -84,17 +84,13 @@ pc_remove <- function(mat,
 
   # Correct one block (either the whole matrix, or one study subset)
   correct_block <- function(block, label = NULL) {
-    cat("== Block:", ifelse(is.null(label), "GLOBAL", label),
-        "| dims:", nrow(block), "genes x", ncol(block), "samples\n")
 
     # 1) drop ~zero-variance genes
     dz <- drop_zero_var(block)
     M  <- dz$M
     kept_idx <- dz$keep
-    cat("   dropped zero-variance genes:", sum(!kept_idx), "\n")
 
     if (nrow(M) == 0) {
-      cat("   all genes ~zero-variance; skipping\n")
       return(list(corrected = block, k = 0L, dropped = rownames(block)[!kept_idx]))
     }
 
@@ -144,7 +140,7 @@ pc_remove <- function(mat,
       stop("Missing metadata for samples: ", paste(unique(missing_samples), collapse = ", "))
     }
 
-    studies <- unique(sample_studies)                 # preserve input order
+    studies <- unique(sample_studies)
     blocks  <- vector("list", length(studies))
     names(blocks) <- studies
     meta <- data.frame(Study = studies, n_pcs = NA_integer_, stringsAsFactors = FALSE)

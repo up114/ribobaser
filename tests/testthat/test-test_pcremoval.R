@@ -19,7 +19,7 @@ test_that("pc_remove: rejects invalid inputs and missing names", {
                "NA/Inf", ignore.case = TRUE)
 })
 
-test_that("pc_remove: global k=0 performs per-sample demeaning", {
+test_that("pc_remove: global k=0 leaves matrix unchanged", {
   set.seed(2)
   G <- 10; S <- 6
   M <- matrix(rnorm(G * S), nrow = G, ncol = S)
@@ -29,18 +29,22 @@ test_that("pc_remove: global k=0 performs per-sample demeaning", {
   out <- pc_remove(M, method = "global", n_pcs = 0L)
   X   <- out$mat_pc
 
-  # When k=0, each sample (column) is demeaned across genes:
-  # colMeans across *all genes kept for SVD* should be ~0.
-  # Since we provided random data (non-constant rows), all rows are "kept".
-  expect_equal(as.numeric(colMeans(X)), rep(0, S), tolerance = 1e-10)
+  # When k=0, pc_remove should act as a no-op on the matrix
+  # (for non-constant genes, so no rows get dropped).
+  expect_equal(X, M, tolerance = 1e-12)
 
   # dims and names preserved
   expect_identical(dim(X), dim(M))
   expect_identical(rownames(X), rownames(M))
   expect_identical(colnames(X), colnames(M))
+
   # n_pcs should be 0 (global integer)
   expect_identical(out$n_pcs, 0L)
+
+  # no genes dropped in this simple random case
+  expect_length(out$dropped_genes, 0L)
 })
+
 
 test_that("pc_remove: zero-variance rows are unchanged and reported", {
   set.seed(3)
