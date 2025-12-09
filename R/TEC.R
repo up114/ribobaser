@@ -20,6 +20,8 @@
 #'   - `'wgcna'` uses the `WGCNA` package and returns a TOM matrix
 #'   - `'glasso'` uses the `huge` package and returns a precision matrix
 #'   - `'genie3'` uses the `GENIE3` package and returns a weight matrix
+#' @param n_cores integer cores for parallel (only used for
+#'   `method = "genie3"`).
 #'
 #' @return Symmetric numeric matrix genes by genes with proportionality scores.
 #' @examples
@@ -37,7 +39,8 @@
 #'
 #' @export
 tec <- function(TE,
-                method = c("rho", "glasso", "wgcna", "genie3")) {
+                method = c("rho", "glasso", "wgcna", "genie3"),
+                n_cores = max(1L, parallel::detectCores() - 1L)) {
 
   method <- match.arg(method)
 
@@ -109,13 +112,14 @@ tec <- function(TE,
     fit = huge::huge(TE,
                      lambda = lambda_grid,
                      method = "glasso",
-                     scr = TRUE
+                     scr = TRUE,
+                     verbose = FALSE
     )
 
     opt_graph = huge::huge.select(
       fit,
       criterion = "ric",
-      verbose = TRUE
+      verbose = FALSE
     )
 
     lambda <- opt_graph$opt.lambda
@@ -144,7 +148,7 @@ tec <- function(TE,
 
     # Basic QC for NAs/zeros
     # removes genes/samples with too many missing values or zero variance
-    gsg <- WGCNA::goodSamplesGenes(TE, verbose = 3)
+    gsg <- WGCNA::goodSamplesGenes(TE, verbose = 0)
     if (!gsg$allOK) {
       TE <- TE[gsg$goodSamples, gsg$goodGenes]
     }
@@ -162,7 +166,7 @@ tec <- function(TE,
       corFnc = "cor",                             # correlation function used to compute similarity
       corOptions = list(use = "pairwise.complete.obs"),  # handles missing data by pairwise deletion
       powerVector = powers,                       # the vector of powers to test
-      verbose = 5                                 # verbosity level
+      verbose = 0
     )
 
     # pick power (find minimum power where R^2 >= 0.9)
@@ -202,7 +206,7 @@ tec <- function(TE,
     }
 
     set.seed(42)
-    W <- GENIE3::GENIE3(as.matrix(TE), nCores = 16, nTrees = 100)
+    W <- GENIE3::GENIE3(as.matrix(TE), nCores = n_cores, nTrees = 100)
 
     # Check same gene set (ignoring order)
     if (!setequal(rownames(W), gene_names)) {
