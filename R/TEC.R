@@ -23,7 +23,7 @@
 #' @param n_cores integer cores for parallel (only used for
 #'   `method = "genie3"`).
 #'
-#' @return Symmetric numeric matrix genes by genes with proportionality scores.
+#' @return Symmetric numeric matrix genes by genes.
 #' @examples
 #'   data("ribo_raw_human_cap_995", package = "ribobaser")
 #'   data("rnaseq_raw_human_cap_995", package = "ribobaser")
