@@ -26,7 +26,11 @@ Imports:
     propr,
     stats,
     sva,
-    zCompositions
+    zCompositions,
+    GENIE3,
+    doRNG,
+    WGCNA,
+    huge
 Depends: 
     R (>= 3.5)
 LazyData: true

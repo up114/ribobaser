@@ -3,12 +3,12 @@
 #' Remove leading principal components (PCs) from a translation efficiency (TE)
 #' matrix to control unwanted sample-level structure. Works either globally
 #' (one SVD across all samples) or per study (one SVD per study block).
-#' 
+#'
 #' Assumptions
 #'  1) Inputs are genes by samples
 #'  2) Inputs are already CLR-normalized (no normalization occurs within this function)
 #'    - either run with TE matrix or with Ribo-Seq/RNA-Seq matrices after CLR normalization
-#' 
+#'
 #' @param mat numeric matrix, genes x samples. Row names = genes; col names = samples.
 #' @param study_map optional data.frame with columns {Experiment} and {Study};
 #'   required when {method = "study"}. {Experiment} must match {colnames(mat)}.
@@ -22,7 +22,7 @@
 #'    - n_pcs: if global, an integer; if study, a data.frame with {Study} and {n_pcs}.
 #'    - dropped_genes: character vector of genes dropped from SVD due to near-zero variance
 #'         (they are re-inserted unchanged in the output).
-#' 
+#'
 #' @examples
 #' # Global correction:
 #' # out <- pc_remove(mat, method = "global")
@@ -54,7 +54,7 @@ pc_remove <- function(mat,
     }
   }
   if (any(!is.finite(mat))) stop("mat contains NA/Inf; handle before pc_remove().")
- 
+
   # -----  helper functions -----
 
   # Drop ~zero-variance genes (for SVD stability). They’re re-inserted unchanged later.
@@ -64,7 +64,7 @@ pc_remove <- function(mat,
     keep <- !(v <= tol | is.na(v))
     list(M = M[keep, , drop = FALSE], keep = keep)
   }
-  
+
   # Decide how many PCs to remove:
   choose_k <- function(Y) {
     # Y is samples x genes - transpose
@@ -105,7 +105,7 @@ pc_remove <- function(mat,
     k <- choose_k(Y)
     cat("   PCs to remove:", k, "\n")
 
-    # 4) regress out top k PCs 
+    # 4) regress out top k PCs
     if (k > 0) {
       sv  <- svd(Y, nu = k, nv = 0)               # only need U (left singular vectors)
       U   <- sv$u[, seq_len(k), drop = FALSE]
@@ -113,8 +113,8 @@ pc_remove <- function(mat,
       beta <- solve(crossprod(X), crossprod(X, Y))
       Y_adj <- Y - X %*% beta                     # residuals
     } else {
-      # no PCs: just demean each sample (row)
-      Y_adj <- Y - rowMeans(Y)
+      # no PCs: no change
+      Y_adj <- Y
     }
 
     # 5) back to genes x samples; re-insert dropped genes unchanged
@@ -136,14 +136,14 @@ pc_remove <- function(mat,
     dropped_all <- g$dropped
 
   } else {
-     # Check for missing metadata 
+     # Check for missing metadata
     study_lookup <- stats::setNames(study_map$Study, study_map$Experiment)
     sample_studies <- study_lookup[colnames(mat)]
     if (any(is.na(sample_studies))) {
       missing_samples <- colnames(mat)[is.na(sample_studies)]
       stop("Missing metadata for samples: ", paste(unique(missing_samples), collapse = ", "))
     }
-    
+
     studies <- unique(sample_studies)                 # preserve input order
     blocks  <- vector("list", length(studies))
     names(blocks) <- studies

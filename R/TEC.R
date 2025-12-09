@@ -19,6 +19,7 @@
 #'     `propr:::lr2rho()` to obtain proportionality scores
 #'   - `'wgcna'` uses the `WGCNA` package and returns a TOM matrix
 #'   - `'glasso'` uses the `huge` package and returns a precision matrix
+#'   - `'genie3'` uses the `GENIE3` package and returns a weight matrix
 #'
 #' @return Symmetric numeric matrix genes by genes with proportionality scores.
 #' @examples
@@ -36,7 +37,7 @@
 #'
 #' @export
 tec <- function(TE,
-                method = c("rho", "glasso", "wgcna")) {
+                method = c("rho", "glasso", "wgcna", "genie3")) {
 
   method <- match.arg(method)
 
@@ -106,9 +107,9 @@ tec <- function(TE,
 
 
     fit = huge::huge(TE,
-               lambda = lambda_grid,
-               method = "glasso",
-               scr = TRUE
+                     lambda = lambda_grid,
+                     method = "glasso",
+                     scr = TRUE
     )
 
     opt_graph = huge::huge.select(
@@ -148,7 +149,7 @@ tec <- function(TE,
       TE <- TE[gsg$goodSamples, gsg$goodGenes]
     }
 
-    if(nrow(TE) < 1) {
+    if(ncol(TE) < 1) {
       stop("All genes dropped in WGCNA QC.")
     }
 
@@ -193,5 +194,31 @@ tec <- function(TE,
     dimnames(TOM) <- list(gene_names, gene_names)
     TOM <- (TOM + t(TOM)) / 2
     return(TOM)
+  }
+  else if(method == "genie3") {
+    if (!requireNamespace("GENIE3", quietly = TRUE)) {
+      stop("Package 'GENIE3' is required for method 'genie3'. Install it with BiocManager::install('GENIE3').",
+           call. = FALSE)
+    }
+
+    set.seed(42)
+    W <- GENIE3::GENIE3(as.matrix(TE), nCores = 16, nTrees = 100)
+
+    # Check same gene set (ignoring order)
+    if (!setequal(rownames(W), gene_names)) {
+      stop("GENIE3 output rows do not match the TE gene set.")
+    }
+    if (!setequal(colnames(W), gene_names)) {
+      stop("GENIE3 output columns do not match the TE gene set.")
+    }
+
+    #  reordering to original TE order
+    W <- W[gene_names, gene_names, drop = FALSE]
+
+    # Make it symmetric by averaging both directions
+    W_sym <- (W + t(W)) / 2
+    dimnames(W_sym) <- list(gene_names, gene_names)
+
+    return(W_sym)
   }
 }

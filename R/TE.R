@@ -104,12 +104,12 @@ te <- function(RIBO, RNA,
                             method = "global",
                             n_pcs = n_pcs,
                             min_samples = 15)
-    ribo_clr_pc <- t(ribo_clr_pc$te_corrected)
-    rna_clr_pc <- t(rna_clr_pc$te_corrected)
+    ribo_clr_pc <- t(ribo_clr_pc$mat_pc)
+    rna_clr_pc <- t(rna_clr_pc$mat_pc)
 
     # force row means back to 0
-    pr_RIBO@logratio <- sweep(ribo_clr_pc, 1, rowMeans(ribo_clr_pc), "-")
-    pr_RNA@logratio <- sweep(rna_clr_pc, 1, rowMeans(rna_clr_pc), "-")
+    pr_RIBO@logratio <- as.data.frame(sweep(ribo_clr_pc, 1, rowMeans(ribo_clr_pc), "-"))
+    pr_RNA@logratio <- as.data.frame(sweep(rna_clr_pc, 1, rowMeans(rna_clr_pc), "-"))
   }
 
   # CLR -> ILR
