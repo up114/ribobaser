@@ -116,7 +116,7 @@ colnames(sample_selection$ribo)
 
 ## Compute translation efficiency with `te()`
 
-We enable two ways to calculate TE. We also have the option to run principal component removal on the Ribo and RNA matrices
+We enable two ways to calculate TE. We also have the option to run principal component removal on the Ribo and RNA matrices, either giving a specific number of PCs to remove or using "auto", which calculate the number of PCs to remove using sva::num.sv(..., method = "be").
 
 ```{r te-logratio}
 te_logratio <- te(t(sample_selection$ribo), t(sample_selection$rna), method = "logratio", pc_removal = FALSE)
@@ -150,7 +150,7 @@ te_by_cell_line <- aggregate_samples(
 head(te_by_cell_line)
 ```
 ## Principal component removal on the TE matrix with `pc_remove()`
-In addition to the option of removing principal components on the Ribo and RNA matrices, principal components can also be removed from the TE matrix itself. PC removal can be run on a global scale or on a study-level scale. In this example, all 3 of the experiments are from the same study and therefore, pass the min_samples cutoff.
+In addition to the option of removing principal components on the Ribo and RNA matrices, principal components can also be removed from the TE matrix itself. PC removal can be run on a global or study-level scale. In this example, all 3 of the experiments are from the same study and therefore, the global and study outputs match.
 
 ```{r pc-remove-global}
 te_pcrem_global <- pc_remove(te_regression, method = 'global', n_pcs = 1)
