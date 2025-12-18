@@ -19,7 +19,7 @@ test_that("pc_remove: rejects invalid inputs and missing names", {
                "NA/Inf", ignore.case = TRUE)
 })
 
-test_that("pc_remove: global k=0 performs per-sample demeaning", {
+test_that("pc_remove: global k=0 leaves matrix unchanged", {
   set.seed(2)
   G <- 10; S <- 6
   M <- matrix(rnorm(G * S), nrow = G, ncol = S)
@@ -27,20 +27,24 @@ test_that("pc_remove: global k=0 performs per-sample demeaning", {
   colnames(M) <- paste0("s", seq_len(S))
 
   out <- pc_remove(M, method = "global", n_pcs = 0L)
-  X   <- out$te_corrected
+  X   <- out$mat_pc
 
-  # When k=0, each sample (column) is demeaned across genes:
-  # colMeans across *all genes kept for SVD* should be ~0.
-  # Since we provided random data (non-constant rows), all rows are "kept".
-  expect_equal(as.numeric(colMeans(X)), rep(0, S), tolerance = 1e-10)
+  # When k=0, pc_remove should act as a no-op on the matrix
+  # (for non-constant genes, so no rows get dropped).
+  expect_equal(X, M, tolerance = 1e-12)
 
   # dims and names preserved
   expect_identical(dim(X), dim(M))
   expect_identical(rownames(X), rownames(M))
   expect_identical(colnames(X), colnames(M))
+
   # n_pcs should be 0 (global integer)
   expect_identical(out$n_pcs, 0L)
+
+  # no genes dropped in this simple random case
+  expect_length(out$dropped_genes, 0L)
 })
+
 
 test_that("pc_remove: zero-variance rows are unchanged and reported", {
   set.seed(3)
@@ -53,7 +57,7 @@ test_that("pc_remove: zero-variance rows are unchanged and reported", {
   M[3, ] <- 5
 
   out <- pc_remove(M, method = "global", n_pcs = 1L)
-  X   <- out$te_corrected
+  X   <- out$mat_pc
 
   # The constant row must be unchanged
   expect_equal(X[3, ], M[3, ], tolerance = 0)
@@ -90,7 +94,7 @@ test_that("pc_remove: removes a rank-1 sample-level signal when k=1", {
 
   # Remove 1 PC
   out <- pc_remove(M, method = "global", n_pcs = 1L)
-  X   <- out$te_corrected  # genes x samples
+  X   <- out$mat_pc  # genes x samples
   Yadj <- t(X)             # samples x genes
 
   # After removing the top sample PC, projection of Yadj onto the original s should be ~0
@@ -119,7 +123,7 @@ test_that("pc_remove: study mode skips small studies and stitches back in order"
   out <- pc_remove(M, study_map = study_map, method = "study",
                    n_pcs = 1L, min_samples = 6L)
 
-  X <- out$te_corrected
+  X <- out$mat_pc
 
   # Columns are stitched back in original order
   expect_identical(colnames(X), colnames(M))
@@ -142,7 +146,7 @@ test_that("pc_remove: dimensions and names always preserved", {
   colnames(M) <- paste0("sample_", seq_len(S))
 
   out <- pc_remove(M, method = "global", n_pcs = 2L)
-  X   <- out$te_corrected
+  X   <- out$mat_pc
 
   expect_identical(dim(X), dim(M))
   expect_identical(rownames(X), rownames(M))
@@ -218,7 +222,7 @@ test_that("residuals are orthogonal to the removed U_k", {
 
   # Call our function
   out <- pc_remove(M, method = "global", n_pcs = 2L)
-  Y_adj <- t(out$te_corrected)
+  Y_adj <- t(out$mat_pc)
 
   # Orthogonality: U' * Y_adj ≈ 0  (each removed PC has ~0 correlation with residuals)
   Z <- t(U) %*% Y_adj     # 2 x genes
@@ -235,8 +239,8 @@ test_that("idempotence for k=0", {
   M <- matrix(rnorm(G*S), nrow = G,
               dimnames = list(paste0("g",1:G), paste0("s",1:S)))
 
-  out1 <- pc_remove(M, method = "global", n_pcs = 0L)$te_corrected
-  out2 <- pc_remove(out1, method = "global", n_pcs = 0L)$te_corrected
+  out1 <- pc_remove(M, method = "global", n_pcs = 0L)$mat_pc
+  out2 <- pc_remove(out1, method = "global", n_pcs = 0L)$mat_pc
   expect_equal(out1, out2, tolerance = 1e-12)  # exactly equal
 })
 
@@ -248,7 +252,7 @@ test_that("all-constant matrix is returned unchanged and k=0", {
               dimnames = list(paste0("g",1:G), paste0("s",1:S)))
 
   out <- pc_remove(M, method = "global", n_pcs = 1L)
-  expect_identical(out$te_corrected, M)
+  expect_identical(out$mat_pc, M)
   expect_identical(out$n_pcs, 0L)  # nothing to remove
   expect_setequal(out$dropped_genes, rownames(M))  # all were dropped for SVD
 })
@@ -265,7 +269,7 @@ test_that("row/col order is preserved", {
   rperm <- sample(1:G); cperm <- sample(1:S)
   M2 <- M[rperm, cperm, drop = FALSE]
 
-  out <- pc_remove(M2, method = "global", n_pcs = 1L)$te_corrected
+  out <- pc_remove(M2, method = "global", n_pcs = 1L)$mat_pc
 
   # Output must match the shuffled ordering, not revert to original
   expect_identical(rownames(out), rownames(M2))
@@ -298,8 +302,8 @@ test_that("study mode respects min_samples boundary and alignment", {
   expect_true(is.data.frame(out$n_pcs))
   expect_identical(sort(out$n_pcs$Study), c("A","B"))
   expect_identical(out$n_pcs$n_pcs[out$n_pcs$Study=="B"], 0L)
-  expect_false(identical(out$te_corrected[, paste0("A",1:A)], M[, paste0("A",1:A)]))
-  expect_identical(out$te_corrected[, paste0("B",1:B)], M[, paste0("B",1:B)])
+  expect_false(identical(out$mat_pc[, paste0("A",1:A)], M[, paste0("A",1:A)]))
+  expect_identical(out$mat_pc[, paste0("B",1:B)], M[, paste0("B",1:B)])
 })
 
 # -- k equals max possible: residual rank sanity ---------------------------
@@ -312,7 +316,7 @@ test_that("k = max yields only intercept residuals (demeaned samples)", {
 
   k_max <- as.integer(min(S, G) - 1L)  # = 3
   out <- pc_remove(M, method = "global", n_pcs = k_max)
-  X   <- out$te_corrected
+  X   <- out$mat_pc
   # After removing all non-intercept subspace, each sample is demeaned:
   expect_equal(as.numeric(colMeans(X)), rep(0, S), tolerance = 1e-10)
 })

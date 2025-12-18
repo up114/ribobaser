@@ -4,7 +4,7 @@ test_that("te returns near-zero residuals when RIBO and RNA match", {
   skip_if_not_installed("compositions")
   skip_if_not_installed("foreach")
 
-  set.seed(123)
+  set.seed(29)
   samples <- paste0("s", 1:3)
   genes <- paste0("g", 1:4)
   counts <- matrix(
@@ -173,4 +173,101 @@ test_that("te logratio errors on non positive inputs", {
   )
 
   expect_error(te(RIBO, RNA, method = "logratio"), "strictly positive")
+})
+
+test_that("te with pc_removal = TRUE and n_pcs = 0 matches default regression TE", {
+  skip_if_not_installed("propr")
+  skip_if_not_installed("compositions")
+  skip_if_not_installed("foreach")
+
+  set.seed(39)
+  samples <- paste0("s", 1:4)
+  genes   <- paste0("g", 1:6)
+
+  counts <- matrix(
+    runif(length(samples) * length(genes), min = 50, max = 200),
+    nrow = length(samples),
+    dimnames = list(samples, genes)
+  )
+
+  te_default <- te(counts, counts, method = "regression", pc_removal = FALSE)
+  te_pc0     <- te(counts, counts, method = "regression", pc_removal = TRUE, n_pcs = 0)
+
+  # basic structure checks
+  expect_true(is.matrix(te_pc0))
+  expect_equal(dim(te_pc0), dim(te_default))
+  expect_equal(rownames(te_pc0), rownames(te_default))
+  expect_equal(colnames(te_pc0), colnames(te_default))
+
+  # with n_pcs = 0, pc_remove should be a no-op (up to numerical noise)
+  expect_equal(te_pc0, te_default, tolerance = 1e-6)
+})
+
+test_that("te with pc_removal = TRUE (auto n_pcs) still yields near-zero TE when RIBO == RNA", {
+  skip_if_not_installed("propr")
+  skip_if_not_installed("compositions")
+  skip_if_not_installed("foreach")
+  skip_if_not_installed("sva")
+
+  set.seed(42)
+  samples <- paste0("s", 1:3)
+  genes   <- paste0("g", 1:5)
+
+  counts <- matrix(
+    runif(length(samples) * length(genes), min = 50, max = 200),
+    nrow = length(samples),
+    dimnames = list(samples, genes)
+  )
+
+  te_pc_auto <- te(
+    counts, counts,
+    method      = "regression",
+    pc_removal  = TRUE,
+    n_pcs       = "auto",
+    parallel    = FALSE
+  )
+
+  expect_true(is.matrix(te_pc_auto))
+  expect_equal(rownames(te_pc_auto), genes)
+  expect_equal(colnames(te_pc_auto), samples)
+
+  zero_matrix <- matrix(
+    0,
+    nrow = length(genes),
+    ncol = length(samples),
+    dimnames = list(genes, samples)
+  )
+
+  # allow a bit more tolerance because SVD + regression introduce extra noise
+  expect_equal(te_pc_auto, zero_matrix, tolerance = 1e-4)
+})
+
+test_that("te pc_removal preserves dimensions and naming when RIBO != RNA", {
+  skip_if_not_installed("propr")
+  skip_if_not_installed("compositions")
+  skip_if_not_installed("foreach")
+
+  set.seed(47)
+  samples <- paste0("s", 1:5)
+  genes   <- paste0("g", 1:7)
+
+  RIBO <- matrix(
+    runif(length(samples) * length(genes), min = 100, max = 300),
+    nrow = length(samples),
+    dimnames = list(samples, genes)
+  )
+  RNA <- matrix(
+    runif(length(samples) * length(genes), min = 50, max = 250),
+    nrow = length(samples),
+    dimnames = list(samples, genes)
+  )
+
+  te_no_pc <- te(RIBO, RNA, method = "regression", pc_removal = FALSE)
+  te_pc    <- te(RIBO, RNA, method = "regression", pc_removal = TRUE, n_pcs = 0)
+
+  # shapes and names should be identical
+  expect_true(is.matrix(te_pc))
+  expect_equal(dim(te_pc), dim(te_no_pc))
+  expect_equal(rownames(te_pc), rownames(te_no_pc))
+  expect_equal(colnames(te_pc), colnames(te_no_pc))
 })

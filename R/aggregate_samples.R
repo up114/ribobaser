@@ -3,20 +3,23 @@
 #' Samples can be aggregated by cell line or study using the group mean.
 #' Optional features to Implement later
 #' a) Support only ribo or RNA
-#' b) Provide option to use either Ribobase_QC_non_dedup_data or Ribobase_QC_dedup_data
-#' c) Provide support for other mathematical functions to aggregate the numerical values
-#' d) Need to explore Battle_GR paper for additional ideas.
-#' e) Potentially add SVA/PCA based confounder correction. This might be in a different script
+#' b) Provide support for other mathematical functions to aggregate the numerical values
+#' c) Need to explore Battle_GR paper for additional ideas.
+#' d) Potentially add SVA/PCA based confounder correction. This might be in a different script
 #'
 #' Given TE matrix with genes in rows and samples in
-#' columns, collapse samples according to metadata supplied in
-#' `Ribobase_QC_dedup_data`. The function currently supports aggregating by
-#' `Study` (GSE accession) or by `Cell line`, computing the mean TE for each gene
+#' columns, collapse samples according to metadata. The function currently supports
+#' aggregating by `Study` (GSE accession) or by `Cell line`, computing the mean TE for each gene
 #' within the chosen grouping.
 #'
 #' @param TE numeric matrix or data.frame with genes in rows and samples in
 #'   columns. Column names must match the `Experiment` identifiers present in
-#'   `Ribobase_QC_dedup_data`.
+#'   the metadata file.
+#' @param metadata Either:
+#'   * a data.frame with `Experiment`, `Cell line`, and `Study` columns, or
+#'   * a character string naming a built-in metadata object
+#'     (`"Ribobase_QC_dedup_data"` or `"Ribobase_QC_non_dedup_data"`).
+#'   Defaults to `"Ribobase_QC_dedup_data"`.
 #' @param group_by character string specifying the metadata field to use when
 #'   combining samples. Either `'study'` or `'cell_line'`. Defaults to `'study'`.
 #' @param fun aggregation function identifier. Currently only `'mean'` is
@@ -33,12 +36,13 @@
 #'   nrow = 2,
 #'   dimnames = list(paste0("g", 1:2), example_samples)
 #' )
-#' aggregate_samples(TE, group_by = "study")
+#' aggregate_samples(TE, metadata = "Ribobase_QC_dedup_data", group_by = "study")
 #' aggregate_samples(TE, group_by = "cell_line")
 #' @importFrom stats setNames
 #' @importFrom utils data
 #' @export
 aggregate_samples <- function(TE,
+                              metadata = "Ribobase_QC_dedup_data",
                               group_by = c("study", "cell_line"),
                               fun = c("mean")) {
   TE <- as.matrix(TE)
@@ -49,9 +53,12 @@ aggregate_samples <- function(TE,
   group_choice <- match.arg(group_by)
   fun_choice <- match.arg(fun)
 
-  utils::data("Ribobase_QC_dedup_data", package = "ribobaser", envir = environment())
-  metadata <- get("Ribobase_QC_dedup_data", envir = environment())
-
+  if(is.character(metadata) && metadata %in% c("Ribobase_QC_dedup_data", "Ribobase_QC_non_dedup_data")) {
+    utils::data(list = metadata, package = "ribobaser", envir = environment())
+    metadata <- get(metadata, envir = environment())
+  } else if(!is.data.frame(metadata)) {
+    stop("Supply a valid data.frame or a known metadata name")
+  }
   meta_subset <- metadata[!duplicated(metadata$Experiment),
                           c("Experiment", "Study", "Cell line"),
                           drop = FALSE]
