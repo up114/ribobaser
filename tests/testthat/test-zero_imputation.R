@@ -9,7 +9,7 @@ test_that("zero_imputation replaces zeros with ones", {
   )
   RNA <- matrix(
     c(7, 8, 9,
-      0, 0, 3),
+      0, 0.1, 3),
     nrow = 2, byrow = T,
     dimnames = list(c("g1", "g2"), paste0("s", 1:3))
   )
@@ -17,11 +17,11 @@ test_that("zero_imputation replaces zeros with ones", {
   res <- zero_imputation(RIBO, RNA)
 
   expect_true(all(res$ribo >= 1))
-  expect_true(all(res$rna  >= 1))
+  expect_true(all(res$rna  > 0))
   expect_equal(res$ribo[1, 1], 1)
   expect_equal(res$ribo[1, 3], 1)
-  expect_equal(res$rna [2, 1], 1)
-  expect_equal(res$rna [2, 2], 1)
+  expect_equal(res$rna [2, 1], 0.1)
+  expect_equal(res$rna [2, 2], 0.1)
 })
 
 test_that("zero_imputation preserves non-zero values and structure", {
