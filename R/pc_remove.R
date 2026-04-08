@@ -82,7 +82,7 @@ pc_remove <- function(mat,
   }
 
   # Correct one block (either the whole matrix, or one study subset)
-  correct_block <- function(block, label = NULL) {
+  correct_block <- function(block) {
 
     # 1) drop ~zero-variance genes
     dz <- drop_zero_var(block)
@@ -125,7 +125,7 @@ pc_remove <- function(mat,
   dropped_all   <- character(0)
 
   if (method == "global") {
-    g <- correct_block(mat, "GLOBAL")
+    g <- correct_block(mat)
     mat_pc <- g$corrected
     n_out   <- g$k
     dropped_all <- g$dropped
@@ -153,7 +153,7 @@ pc_remove <- function(mat,
         blocks[[s]] <- sub
         meta$n_pcs[meta$Study == s] <- 0L
       } else {
-        res <- correct_block(sub, s)
+        res <- correct_block(sub)
         blocks[[s]] <- res$corrected
         meta$n_pcs[meta$Study == s] <- res$k
         dropped_all <- c(dropped_all, res$dropped)
