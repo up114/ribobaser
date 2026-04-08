@@ -67,13 +67,12 @@ pc_remove <- function(mat,
 
   # Decide how many PCs to remove:
   choose_k <- function(Y) {
-    # Y is samples x genes - transpose
     if (identical(n_pcs, "auto")) {
       if (!requireNamespace("sva", quietly = TRUE)) {
         stop("Install 'sva' for n_pcs='auto'.")
       }
-      mod <- matrix(1, nrow = nrow(Y), ncol = 1)
-      k   <- as.integer(sva::num.sv(t(Y), mod, method = "be"))
+      mod <- matrix(1, nrow = ncol(Y), ncol = 1)
+      k   <- as.integer(sva::num.sv(Y, mod, method = "be"))
     } else {
       k <- as.integer(n_pcs)
     }
@@ -94,19 +93,19 @@ pc_remove <- function(mat,
       return(list(corrected = block, k = 0L, dropped = rownames(block)[!kept_idx]))
     }
 
-    # 2) transpose: samples x genes
-    Y <- t(M)
-
-    # 3) pick k
-    k <- choose_k(Y)
+    # 2) pick k
+    k <- choose_k(M)
     cat("   PCs to remove:", k, "\n")
+
+    # 3) transpose: samples x genes
+    Y <- t(M)
 
     # 4) regress out top k PCs
     if (k > 0) {
       sv  <- svd(Y, nu = k, nv = 0)               # only need U (left singular vectors)
       U   <- sv$u[, seq_len(k), drop = FALSE]
       X   <- cbind(1, U)                          # design = [Intercept, U_k]
-      beta <- solve(crossprod(X), crossprod(X, Y))
+      beta <- solve(crossprod(X), crossprod(X, Y)) # least squares solution
       Y_adj <- Y - X %*% beta                     # residuals
     } else {
       # no PCs: no change
